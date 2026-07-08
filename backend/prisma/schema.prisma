@@ -1,0 +1,67 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String           @id @default(uuid())
+  email         String           @unique
+  password      String?
+  name          String
+  avatarUrl     String?
+  googleId      String?          @unique
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  reports       ResearchReport[]
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+  @@index([token])
+}
+
+enum Recommendation {
+  INVEST
+  PASS
+}
+
+model ResearchReport {
+  id              String         @id @default(uuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName     String
+  ticker          String
+  recommendation  Recommendation
+  confidenceScore Int
+  reasoning       String         @db.Text
+  overview        Json           // { businessModel, industry, revenue, marketCap, competitors }
+  swot            Json           // { strengths: [], weaknesses: [], opportunities: [], threats: [] }
+  financials      Json           // { ratios, revenueGrowth, operatingMargins }
+  risks           Json           // [ { risk: string, impact: "High" | "Medium" | "Low" } ]
+  sentiment       Json           // { recentNews: [], analystSentiment: string }
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@map("research_reports")
+  @@index([ticker])
+  @@index([userId])
+}
